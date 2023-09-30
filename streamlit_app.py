@@ -11,12 +11,13 @@ def load_data():
 st.sidebar.title("EDA Options")
 
 data = load_data()
+data.dropna()
 st.title("Heart Failure Dataset")
+st.write("""
+The heart failure dataset is a collection of medical data that offers critical insights on heart failure.
 
-col1, col2 = st.columns(2)
+""")
 
-st.header("Explore Data")
-# feature_to_plot = st.sidebar.selectbox("Select a feature to visualize", data.columns)
 age_range = st.sidebar.slider("Select Age Range", min_value=int(data['Age'].min()), max_value=int(data['Age'].max()), value=(int(data['Age'].min()), int(data['Age'].max())))
 gender = st.sidebar.radio("Select Gender", ["All", "Male", "Female"])
     
@@ -26,12 +27,14 @@ filtered_data = filtered_data[(filtered_data['Age'] >= age_range[0]) & (filtered
 if gender != "All":
     filtered_data = filtered_data[filtered_data['Sex'] == ("F" if gender == "Female" else "M")]
 
-# corr=data.corr()
-# g = sns.heatmap(corr,cmap="viridis")
-# st.pyplot(g)
+selected_features = st.multiselect("Select Features", ["RestingBP","Cholesterol","FastingBS","MaxHR","Oldpeak"])
+g = sns.pairplot(filtered_data[selected_features+["Age","HeartDisease"]], hue="HeartDisease")
 
-# g = sns.pairplot(filtered_data[["Age","RestingBP","Cholesterol","FastingBS","MaxHR","Oldpeak","HeartDisease"]], hue="HeartDisease")
-# st.pyplot(g)
+st.pyplot(g)
+
+g = sns.FacetGrid(data=filtered_data, col="ChestPainType", row="Sex", hue="HeartDisease")
+g.map(sns.scatterplot,"MaxHR", "Oldpeak")
+st.pyplot(g)
 
 g = sns.jointplot(
     data=filtered_data,
@@ -40,21 +43,15 @@ g = sns.jointplot(
 )
 st.pyplot(g)
 
-# g = sns.lmplot(data=filtered_data, x="MaxHR", y="Oldpeak", markers='o', scatter_kws={'s': 5, 'alpha': 0.8}, lowess=True, hue= "HeartDisease", palette="muted")
-# st.pyplot(g.figure)
-
 g = sns.violinplot(data=filtered_data, x="HeartDisease", y="MaxHR", palette="pastel")
 st.pyplot(g.figure)
 
-# g =sns.boxplot(data=filtered_data, x="HeartDisease", y="Oldpeak", palette="muted")
-# st.pyplot(g.figure)
-
-g = sns.FacetGrid(data=filtered_data, col="ChestPainType", row="Sex", hue="HeartDisease")
-g.map(sns.scatterplot,"MaxHR", "Oldpeak")
-st.pyplot(g)
+st.header("Correlation")
+corr=data.select_dtypes(include='number').corr()
+g = sns.heatmap(corr,cmap="viridis")
+st.pyplot(g.figure)
 
 st.header("Data Summary")
 st.write(data.describe())
 
-# Note
-st.sidebar.markdown("**Note:** This is an EDA-only app. Use the sliders and radio buttons to explore the dataset.")
+st.sidebar.markdown("**Note:** Use the sliders and radio buttons to explore the dataset.")
