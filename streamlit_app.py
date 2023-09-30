@@ -1,42 +1,60 @@
 import streamlit as st
-import seaborn as sns
 import pandas as pd
-import plotly.express as px
-
-#iris dataset 3D plot in plotly
-
-df = sns.load_dataset("iris")
-st.write("""
-# Iris dataset
-The iris dataset is tabular dataset containing 5 columns with information about various species of iris.
-""")
-fig = px.scatter_3d(df, x="sepal_length", y="sepal_width", z="petal_length", color='species',\
-                    size='petal_width', size_max=15, opacity=0.8, title='Iris dataset')
-fig.update_layout(scene=dict(xaxis_title='sepal_length',yaxis_title='sepal_width',zaxis_title='petal_length'))
-st.plotly_chart(fig, use_container_width=True)
-
-
-
-#MPG dataset 3D plot in matplotlib
-
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+import seaborn as sns
 
-df = sns.load_dataset("mpg")
-st.write("""
-# MPG Dataset
-""")
-origins = df['origin'].unique()
+@st.cache_data
+def load_data():
+    data = pd.read_csv("datasets/heart_failure.csv")
+    return data
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
+st.sidebar.title("EDA Options")
 
-for origin in origins:
-    subset = df[df['origin'] == origin]
-    scatter = ax.scatter(subset['horsepower'], subset['weight'], subset['mpg'], label=origin, s=subset['acceleration'], marker='o')
+data = load_data()
+st.title("Heart Failure Dataset")
 
-ax.set_xlabel('Horsepower')
-ax.set_ylabel('Weight')
-ax.set_zlabel('MPG')
-ax.legend(title='Origin')
-st.pyplot(fig)
+col1, col2 = st.columns(2)
+
+st.header("Explore Data")
+# feature_to_plot = st.sidebar.selectbox("Select a feature to visualize", data.columns)
+age_range = st.sidebar.slider("Select Age Range", min_value=int(data['Age'].min()), max_value=int(data['Age'].max()), value=(int(data['Age'].min()), int(data['Age'].max())))
+gender = st.sidebar.radio("Select Gender", ["All", "Male", "Female"])
+    
+st.header("Data Visualization")
+filtered_data = data.copy()
+filtered_data = filtered_data[(filtered_data['Age'] >= age_range[0]) & (filtered_data['Age'] <= age_range[1])]
+if gender != "All":
+    filtered_data = filtered_data[filtered_data['Sex'] == ("F" if gender == "Female" else "M")]
+
+# corr=data.corr()
+# g = sns.heatmap(corr,cmap="viridis")
+# st.pyplot(g)
+
+# g = sns.pairplot(filtered_data[["Age","RestingBP","Cholesterol","FastingBS","MaxHR","Oldpeak","HeartDisease"]], hue="HeartDisease")
+# st.pyplot(g)
+
+g = sns.jointplot(
+    data=filtered_data,
+    x="MaxHR", y="Oldpeak", hue="HeartDisease",
+    kind="kde"
+)
+st.pyplot(g)
+
+# g = sns.lmplot(data=filtered_data, x="MaxHR", y="Oldpeak", markers='o', scatter_kws={'s': 5, 'alpha': 0.8}, lowess=True, hue= "HeartDisease", palette="muted")
+# st.pyplot(g.figure)
+
+g = sns.violinplot(data=filtered_data, x="HeartDisease", y="MaxHR", palette="pastel")
+st.pyplot(g.figure)
+
+# g =sns.boxplot(data=filtered_data, x="HeartDisease", y="Oldpeak", palette="muted")
+# st.pyplot(g.figure)
+
+g = sns.FacetGrid(data=filtered_data, col="ChestPainType", row="Sex", hue="HeartDisease")
+g.map(sns.scatterplot,"MaxHR", "Oldpeak")
+st.pyplot(g)
+
+st.header("Data Summary")
+st.write(data.describe())
+
+# Note
+st.sidebar.markdown("**Note:** This is an EDA-only app. Use the sliders and radio buttons to explore the dataset.")
